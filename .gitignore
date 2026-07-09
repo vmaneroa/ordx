@@ -1,0 +1,25 @@
+# Dependencias
+node_modules/
+client/node_modules/
+
+# Entorno
+.env
+.env.local
+
+# Build
+client/dist/
+dist/
+
+# Vercel
+.vercel/
+
+# Iconos generados en build (client/scripts/generate-icons.mjs)
+*.png
+
+# Logs
+*.log
+npm-debug.log*
+
+# Sistema
+.DS_Store
+Thumbs.db

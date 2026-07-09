@@ -1,0 +1,13 @@
+{
+  "name": "ordx",
+  "version": "1.0.0",
+  "description": "Del caos al orden, al instante",
+  "private": true,
+  "scripts": {
+    "dev": "npm run dev --prefix client",
+    "build": "npm run build --prefix client",
+    "start": "npm run preview --prefix client",
+    "icons": "node client/scripts/generate-icons.mjs",
+    "postinstall": "npm install --prefix client"
+  }
+}
