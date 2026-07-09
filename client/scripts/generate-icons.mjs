@@ -14,9 +14,10 @@ const ORD_COLOR = '#EEEEF5';
 const X_COLOR = '#7C3AED';
 
 const svgIcon = (size) => {
-  const fontSize = Math.round(size * 0.34);
+  const fontSize = Math.round(size * 0.32);
   const y = Math.round(size * 0.63);
-  const x = Math.round(size * 0.08);
+  const ordX = Math.round(size * 0.08);
+  const xX = Math.round(size * 0.67);
 
   return Buffer.from(`<svg width="${size}" height="${size}"
     viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg">
@@ -28,16 +29,16 @@ const svgIcon = (size) => {
     </defs>
     <rect width="${size}" height="${size}"
           rx="${Math.round(size * 0.22)}" fill="#08080E"/>
-    <text x="${x}" y="${y}"
+    <text x="${ordX}" y="${y}"
           font-family="Arial Black, Arial, sans-serif"
           font-weight="900"
           font-size="${fontSize}"
-          fill="#FFFFFF">o</text>
-    <text x="${Math.round(size * 0.285)}" y="${y}"
+          fill="#EEEEF5">ord</text>
+    <text x="${xX}" y="${y}"
           font-family="Arial Black, Arial, sans-serif"
           font-weight="900"
           font-size="${fontSize}"
-          fill="url(#g)">rdx</text>
+          fill="url(#g)">x</text>
   </svg>`);
 };
 
