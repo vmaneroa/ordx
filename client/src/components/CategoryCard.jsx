@@ -1,158 +1,147 @@
 import { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 
-const CHECKABLE = new Set(['urgente', 'tareas', 'compra']);
-const PROGRESS = new Set(['urgente', 'tareas']);
-const TIME_REGEX = /\b(\d{1,2}:\d{2})\b/;
+// Metadatos de diseño por categoría (color, título fijo, modo de ítem)
+const META = {
+  urgente: { color: '#F0685F', title: 'Urgente y prioritario', sub: 'Para hoy', mode: 'check' },
+  tareas: { color: '#8A6BF0', title: 'Tareas pendientes', mode: 'check' },
+  calendario: { color: '#4FD0E6', title: 'Calendario y citas', mode: 'dot' },
+  compra: { color: '#5FCE9B', title: 'Lista de la compra', mode: 'check' },
+  notas: { color: '#E6B860', title: 'Notas e ideas', mode: 'dot' },
+  ruido: { color: '#9A93B5', title: 'Ruido mental', mode: 'noise' },
+};
 
-function Checkmark() {
+function hexToRgba(hex, a) {
+  const n = parseInt(hex.slice(1), 16);
+  return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${a})`;
+}
+
+function Chevron({ open }) {
   return (
-    <svg width="10" height="8" viewBox="0 0 10 8" fill="none" aria-hidden="true">
-      <path
-        d="M1 4L3.8 6.8L9 1.2"
-        stroke="white"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
+    <span style={{ display: 'flex', transition: 'transform 0.25s', transform: `rotate(${open ? 0 : -90}deg)` }}>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--text-40)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <polyline points="6 9 12 15 18 9" />
+      </svg>
+    </span>
+  );
+}
+
+function Check({ on }) {
+  return (
+    <svg width="12" height="9" viewBox="0 0 12 9" fill="none" style={{ opacity: on ? 1 : 0, transition: 'opacity 0.18s' }}>
+      <path d="M1 4.5L4.2 7.5L11 1" stroke="#fff" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
 
-// Extrae la hora de un ítem de calendario y limpia conectores colgantes
-function splitEventTime(text) {
-  const match = text.match(TIME_REGEX);
-  if (!match) return null;
-  const rest = text
-    .replace(match[1], '')
-    .replace(/\s{2,}/g, ' ')
-    .replace(/[,\s]*(a las|a la|de las|a)\s*$/i, '')
-    .trim();
-  return { time: match[1], rest: rest || text };
-}
-
 export default function CategoryCard({ category, checks, onToggleCheck }) {
-  const [expanded, setExpanded] = useState(true);
-  const isCheckable = CHECKABLE.has(category.id);
-  const doneCount = isCheckable
-    ? category.items.filter((_, i) => checks[`${i}_${category.id}`]).length
-    : 0;
-  const showProgress = PROGRESS.has(category.id) && doneCount > 0;
+  const [collapsed, setCollapsed] = useState(false);
+  const meta = META[category.id] || { color: '#8A6BF0', title: category.title, mode: 'dot' };
+  const open = !collapsed;
+  const color = meta.color;
+  const isNoise = meta.mode === 'noise';
+  const isCheck = meta.mode === 'check';
+
+  const items = category.items || [];
+  const doneCount = isCheck ? items.filter((_, i) => checks[`${i}_${category.id}`]).length : 0;
+  const showProgress = isCheck && items.length >= 2;
 
   return (
     <div
-      className="category-card"
       style={{
-        '--cat-color': `var(--cat-${category.id})`,
-        '--cat-color-dim': `var(--cat-${category.id}-dim)`,
+        borderRadius: 22,
+        border: `1px solid ${isNoise ? hexToRgba(color, 0.16) : 'var(--border)'}`,
+        background: isNoise ? hexToRgba(color, 0.05) : 'var(--surface)',
+        overflow: 'hidden',
+        marginBottom: 12,
       }}
     >
+      {/* Header colapsable */}
       <button
         type="button"
-        onClick={() => setExpanded((v) => !v)}
-        className="card-header"
-        aria-expanded={expanded}
+        onClick={() => setCollapsed((v) => !v)}
+        style={{ display: 'flex', alignItems: 'center', gap: 13, padding: '16px 18px', cursor: 'pointer', width: '100%', border: 'none', background: 'transparent', textAlign: 'left' }}
+        aria-expanded={open}
       >
-        <span className="card-emoji" aria-hidden="true">
-          {category.emoji}
-        </span>
-        <span className="card-title">{category.title}</span>
-        <span className="card-badge">{category.items.length}</span>
-        <span className={`card-chevron${expanded ? ' open' : ''}`} aria-hidden="true">
-          ▼
-        </span>
+        <span style={{ fontSize: 20 }}>{category.emoji}</span>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontFamily: 'var(--sans)', fontSize: 15, fontWeight: 600, color: 'var(--text)', letterSpacing: '-0.01em' }}>
+            {meta.title}
+          </div>
+          {meta.sub && (
+            <div style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '0.14em', color, marginTop: 3 }}>
+              {meta.sub}
+            </div>
+          )}
+        </div>
+        {!isNoise && (
+          <span style={{ fontFamily: 'var(--mono)', fontSize: 12, fontWeight: 500, minWidth: 24, height: 24, padding: '0 7px', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', color, background: hexToRgba(color, 0.12) }}>
+            {items.length}
+          </span>
+        )}
+        <Chevron open={open} />
       </button>
 
-      {showProgress && (
-        <div className="card-progress">
-          <div className="card-progress-track">
-            <div
-              className="card-progress-fill"
-              style={{ width: `${(doneCount / category.items.length) * 100}%` }}
-            />
-          </div>
-          <span className="text-caption tabular-nums">
-            {doneCount} / {category.items.length}
-          </span>
+      {/* Cuerpo */}
+      {open && (
+        <div style={{ padding: '0 18px 16px' }}>
+          {isNoise ? (
+            items.map((item, i) => (
+              <div key={i} style={{ padding: '4px 2px 2px', fontFamily: 'var(--serif)', fontSize: 19, fontStyle: 'italic', lineHeight: 1.5, color: 'var(--text-72)' }}>
+                {item}
+              </div>
+            ))
+          ) : (
+            <>
+              {showProgress && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '2px 0 12px' }}>
+                  <div style={{ flex: 1, height: 5, borderRadius: 3, background: 'rgba(255,255,255,0.06)', overflow: 'hidden' }}>
+                    <div style={{ height: '100%', borderRadius: 3, transition: 'width 0.35s cubic-bezier(0.2,0.8,0.2,1)', background: color, width: `${Math.round((doneCount / items.length) * 100)}%` }} />
+                  </div>
+                  <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--text-45)' }}>
+                    {doneCount}/{items.length}
+                  </span>
+                </div>
+              )}
+
+              {items.map((item, i) => {
+                if (isCheck) {
+                  const on = Boolean(checks[`${i}_${category.id}`]);
+                  return (
+                    <button
+                      key={i}
+                      type="button"
+                      onClick={() => onToggleCheck(category.id, i)}
+                      style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '9px 0', cursor: 'pointer', width: '100%', border: 'none', background: 'transparent', textAlign: 'left' }}
+                    >
+                      <span
+                        style={{
+                          width: 22, height: 22, borderRadius: 7, flex: '0 0 auto', display: 'flex', alignItems: 'center', justifyContent: 'center', marginTop: 1, transition: 'all 0.2s',
+                          background: on ? color : 'rgba(255,255,255,0.03)',
+                          border: on ? '1px solid transparent' : '1.6px solid rgba(255,255,255,0.16)',
+                          boxShadow: on ? `0 4px 16px ${hexToRgba(color, 0.4)}` : 'none',
+                          animation: on ? 'pop 0.3s ease' : 'none',
+                        }}
+                      >
+                        <Check on={on} />
+                      </span>
+                      <span style={{ flex: 1, fontSize: 15, lineHeight: 1.45, transition: 'all 0.22s', color: on ? 'rgba(244,243,248,0.34)' : 'var(--text-90)', textDecoration: on ? 'line-through' : 'none' }}>
+                        {item}
+                      </span>
+                    </button>
+                  );
+                }
+                // Modo dot (calendario, notas)
+                return (
+                  <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '9px 0' }}>
+                    <span style={{ width: 8, height: 8, borderRadius: '50%', flex: '0 0 auto', marginTop: 8, background: color }} />
+                    <span style={{ flex: 1, fontSize: 15, lineHeight: 1.45, color: 'var(--text-90)' }}>{item}</span>
+                  </div>
+                );
+              })}
+            </>
+          )}
         </div>
       )}
-
-      <AnimatePresence initial={false}>
-        {expanded && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.25, ease: 'easeInOut' }}
-            style={{ overflow: 'hidden' }}
-          >
-            {category.id === 'ruido' ? (
-              <div style={{ paddingTop: 'var(--s1)' }}>
-                {category.items.map((item, index) => (
-                  <blockquote key={index} className="ruido-block">
-                    <div className="ruido-label">Descartado</div>
-                    {item}
-                  </blockquote>
-                ))}
-              </div>
-            ) : (
-              <ul>
-                {category.items.map((item, index) => {
-                  const isChecked = Boolean(checks[`${index}_${category.id}`]);
-
-                  if (isCheckable) {
-                    const round = category.id === 'compra';
-                    return (
-                      <li key={index}>
-                        <button
-                          type="button"
-                          onClick={() => onToggleCheck(category.id, index)}
-                          className={`card-item tappable${isChecked ? ' done' : ''}`}
-                          role="checkbox"
-                          aria-checked={isChecked}
-                        >
-                          <span
-                            className={`checkbox${round ? ' round' : ''}${isChecked ? ' checked' : ''}`}
-                            aria-hidden="true"
-                          >
-                            {isChecked && <Checkmark />}
-                          </span>
-                          <span className="item-text">{item}</span>
-                        </button>
-                      </li>
-                    );
-                  }
-
-                  if (category.id === 'calendario') {
-                    const event = splitEventTime(item);
-                    return (
-                      <li key={index} className="card-item">
-                        {event ? (
-                          <>
-                            <span className="event-time tabular-nums">{event.time}</span>
-                            <span className="item-text">{event.rest}</span>
-                          </>
-                        ) : (
-                          <>
-                            <span aria-hidden="true">📅</span>
-                            <span className="item-text">{item}</span>
-                          </>
-                        )}
-                      </li>
-                    );
-                  }
-
-                  return (
-                    <li key={index} className="card-item">
-                      <span className="item-text">{item}</span>
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-          </motion.div>
-        )}
-      </AnimatePresence>
     </div>
   );
 }

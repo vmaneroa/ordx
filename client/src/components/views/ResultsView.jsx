@@ -1,22 +1,48 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { motion } from 'framer-motion';
-import AppHeader from '../AppHeader.jsx';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import CategoryCard from '../CategoryCard.jsx';
 import { getChecks, saveChecks } from '../../utils/storage.js';
 
 const CHECKABLE = new Set(['urgente', 'tareas', 'compra']);
+const MESES = ['ENE', 'FEB', 'MAR', 'ABR', 'MAY', 'JUN', 'JUL', 'AGO', 'SEP', 'OCT', 'NOV', 'DIC'];
+
+function formatDate(iso) {
+  const d = new Date(iso);
+  const now = new Date();
+  const a = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const b = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  const diff = Math.round((a - b) / 86400000);
+  const rel = diff === 0 ? 'HOY' : diff === 1 ? 'AYER' : null;
+  const stamp = `${d.getDate()} ${MESES[d.getMonth()]}`;
+  return rel ? `${rel} · ${stamp}` : stamp;
+}
 
 function buildMarkdown(entry) {
   return entry.parsed
-    .map((cat) => {
-      const items = cat.items.map((item) => `- ${item}`).join('\n');
-      return `## ${cat.emoji} ${cat.title}\n\n${items}`;
+    .map((c) => {
+      const head = `${c.emoji} ${c.title}`;
+      const body = c.items.map((it) => `  - ${it}`).join('\n');
+      return `${head}\n${body}`;
     })
     .join('\n\n');
 }
 
-export default function ResultsView({ entry, onNewDump, showToast }) {
-  const scrollAnchorRef = useRef(null);
+function StatCard({ value, label, color }) {
+  const tint = color
+    ? { background: `${color}14`, border: `1px solid ${color}33` }
+    : { background: 'var(--surface-2)', border: '1px solid var(--border)' };
+  return (
+    <div style={{ flex: 1, padding: 14, borderRadius: 16, ...tint }}>
+      <div style={{ fontFamily: 'var(--serif)', fontSize: 30, color: color || 'var(--text)', lineHeight: 1 }}>
+        {value}
+      </div>
+      <div style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '0.1em', color: color ? `${color}b3` : 'var(--text-45)', marginTop: 5 }}>
+        {label}
+      </div>
+    </div>
+  );
+}
+
+export default function ResultsView({ entry, showToast, onOpenSettings }) {
   const [checks, setChecks] = useState(() => getChecks(entry.id));
 
   useEffect(() => {
@@ -26,8 +52,7 @@ export default function ResultsView({ entry, onNewDump, showToast }) {
   const toggleCheck = useCallback(
     (categoryId, itemIndex) => {
       setChecks((prev) => {
-        const key = `${itemIndex}_${categoryId}`;
-        const next = { ...prev, [key]: !prev[key] };
+        const next = { ...prev, [`${itemIndex}_${categoryId}`]: !prev[`${itemIndex}_${categoryId}`] };
         saveChecks(entry.id, next);
         return next;
       });
@@ -35,23 +60,36 @@ export default function ResultsView({ entry, onNewDump, showToast }) {
     [entry.id]
   );
 
-  const copyMarkdown = useCallback(async () => {
-    const markdown = buildMarkdown(entry);
+  const stats = useMemo(() => {
+    let total = 0;
+    let urgent = 0;
+    let done = 0;
+    entry.parsed.forEach((c) => {
+      if (c.id === 'ruido') return;
+      c.items.forEach((_, i) => {
+        total += 1;
+        if (c.id === 'urgente') urgent += 1;
+        if (CHECKABLE.has(c.id) && checks[`${i}_${c.id}`]) done += 1;
+      });
+    });
+    return { total, urgent, done };
+  }, [entry.parsed, checks]);
+
+  const copy = useCallback(async () => {
+    const md = buildMarkdown(entry);
     try {
-      await navigator.clipboard.writeText(markdown);
+      await navigator.clipboard.writeText(md);
       showToast('¡Copiado!');
     } catch {
-      // Fallback para contextos sin Clipboard API (iframes, PWAs antiguas)
       try {
-        const helper = document.createElement('textarea');
-        helper.value = markdown;
-        helper.style.position = 'fixed';
-        helper.style.opacity = '0';
-        document.body.appendChild(helper);
-        helper.select();
-        const ok = document.execCommand('copy');
-        helper.remove();
-        if (!ok) throw new Error('copy failed');
+        const ta = document.createElement('textarea');
+        ta.value = md;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        ta.remove();
         showToast('¡Copiado!');
       } catch {
         showToast('No se pudo copiar', 'danger');
@@ -59,89 +97,54 @@ export default function ResultsView({ entry, onNewDump, showToast }) {
     }
   }, [entry, showToast]);
 
-  const scrollToTop = useCallback(() => {
-    scrollAnchorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }, []);
-
-  const stats = useMemo(() => {
-    const totalItems = entry.parsed.reduce((sum, cat) => sum + cat.items.length, 0);
-    const urgentCount = entry.parsed.find((cat) => cat.id === 'urgente')?.items.length || 0;
-    const doneCount = entry.parsed
-      .filter((cat) => CHECKABLE.has(cat.id))
-      .reduce(
-        (sum, cat) =>
-          sum + cat.items.filter((_, i) => checks[`${i}_${cat.id}`]).length,
-        0
-      );
-    return { totalItems, urgentCount, doneCount };
-  }, [entry.parsed, checks]);
-
   return (
-    <motion.section
-      initial={{ y: 16, opacity: 0 }}
-      animate={{ y: 0, opacity: 1 }}
-      exit={{ y: -8, opacity: 0 }}
-      transition={{ duration: 0.25, ease: [0.25, 0.46, 0.45, 0.94] }}
-    >
-      <div ref={scrollAnchorRef} />
-
-      <AppHeader
-        left={
-          <button type="button" onClick={onNewDump} className="btn-ghost">
-            ← Nuevo volcado
-          </button>
-        }
-        title="Tu orden"
-        right={
-          <button
-            type="button"
-            onClick={copyMarkdown}
-            aria-label="Copiar resultado en Markdown"
-            className="btn-ghost"
-            style={{ fontSize: 16 }}
-          >
-            📋
-          </button>
-        }
-      />
-
-      <div className="stats-bar">
-        <span className="stats-chip">{stats.totalItems} ítems</span>
-        {stats.urgentCount > 0 && (
-          <span className="stats-chip" style={{ color: 'var(--cat-urgente)' }}>
-            {stats.urgentCount} {stats.urgentCount === 1 ? 'urgente' : 'urgentes'}
-          </span>
-        )}
-        {stats.doneCount > 0 && (
-          <span className="stats-chip" style={{ color: 'var(--cat-notas)' }}>
-            {stats.doneCount} {stats.doneCount === 1 ? 'completada' : 'completadas'}
-          </span>
-        )}
+    <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', animation: 'fadeScreen 0.45s ease' }}>
+      {/* Header */}
+      <div style={{ padding: 'calc(12px + env(safe-area-inset-top)) 22px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <button type="button" aria-label="Ajustes" onClick={onOpenSettings} className="icon-btn">
+          <svg width="19" height="19" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+            <line x1="3" y1="7" x2="17" y2="7" />
+            <circle cx="8" cy="7" r="2.1" fill="var(--bg)" />
+            <line x1="3" y1="13" x2="17" y2="13" />
+            <circle cx="13" cy="13" r="2.1" fill="var(--bg)" />
+          </svg>
+        </button>
+        <span style={{ fontFamily: 'var(--mono)', fontSize: 11, letterSpacing: '0.12em', color: 'var(--text-40)' }}>
+          {formatDate(entry.createdAt)}
+        </span>
+        <button type="button" onClick={copy} style={{ display: 'flex', alignItems: 'center', gap: 7, height: 40, padding: '0 14px', borderRadius: 13, border: '1px solid var(--border-2)', background: 'var(--surface-2)', cursor: 'pointer' }}>
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--text-85)" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="9" y="9" width="11" height="11" rx="2.5" />
+            <path d="M6 15H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v1" />
+          </svg>
+          <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-85)' }}>Copiar</span>
+        </button>
       </div>
 
-      <div
-        className="flex flex-col"
-        style={{ padding: 'var(--s3) var(--s4)', gap: 'var(--s2)' }}
-      >
-        {entry.parsed.map((category, index) => (
-          <motion.div
-            key={category.id}
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{
-              duration: 0.25,
-              delay: index * 0.07,
-              ease: [0.25, 0.46, 0.45, 0.94],
-            }}
-          >
-            <CategoryCard category={category} checks={checks} onToggleCheck={toggleCheck} />
-          </motion.div>
+      {/* Contenido scrollable */}
+      <div className="scroll-y" style={{ flex: 1, minHeight: 0, padding: '0 22px calc(24px + env(safe-area-inset-bottom))' }}>
+        <div style={{ animation: 'floatUp 0.5s ease both' }}>
+          <div style={{ fontFamily: 'var(--serif)', fontSize: 40, lineHeight: 1.05, color: 'var(--text)', letterSpacing: '-0.01em' }}>
+            Del caos,{' '}
+            <span style={{ fontStyle: 'italic', background: 'var(--grad-2)', WebkitBackgroundClip: 'text', backgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+              esto
+            </span>
+          </div>
+          <div style={{ fontSize: 14, color: 'var(--text-50)', marginTop: 6 }}>
+            Ya está todo en su sitio. Respira.
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', gap: 10, margin: '22px 0 8px', animation: 'floatUp 0.5s ease 0.08s both' }}>
+          <StatCard value={stats.total} label="ÍTEMS" />
+          <StatCard value={stats.urgent} label="URGENTES" color="#F0685F" />
+          <StatCard value={stats.done} label="HECHAS" color="#5FCE9B" />
+        </div>
+
+        {entry.parsed.map((category) => (
+          <CategoryCard key={category.id} category={category} checks={checks} onToggleCheck={toggleCheck} />
         ))}
       </div>
-
-      <button type="button" onClick={scrollToTop} aria-label="Volver arriba" className="fab">
-        ✨
-      </button>
-    </motion.section>
+    </div>
   );
 }

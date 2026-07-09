@@ -20,6 +20,7 @@ export default function App() {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [toast, setToast] = useState(null);
   const [showSplash, setShowSplash] = useState(true);
+  const [listening, setListening] = useState(false); // dictado por voz activo (oculta la nav)
 
   useEffect(() => {
     const t = setTimeout(() => setShowSplash(false), 1800);
@@ -91,49 +92,42 @@ export default function App() {
   }, []);
 
   const hasResults = Boolean(current);
+  const chromeless = loading || listening; // procesando o dictando: sin bottom-nav
 
   return (
     <>
       {showSplash && <SplashScreen />}
-      <div
-        className="app-shell"
-        style={{ opacity: showSplash ? 0 : 1, transition: 'opacity 300ms' }}
-      >
+      <div className="app-shell" style={{ opacity: showSplash ? 0 : 1, transition: 'opacity 300ms' }}>
         <main className="view-scroll">
-        <AnimatePresence mode="wait">
           {view === 'input' && (
             <InputView
-              key="input"
               text={text}
               setText={setText}
               loading={loading}
               error={error}
               onSubmit={processText}
               onOpenSettings={() => setSettingsOpen(true)}
+              onListeningChange={setListening}
             />
           )}
           {view === 'results' && current && (
             <ResultsView
-              key={`results-${current.id}`}
               entry={current}
-              onNewDump={startNewDump}
               showToast={showToast}
+              onOpenSettings={() => setSettingsOpen(true)}
             />
           )}
           {view === 'history' && (
             <HistoryView
-              key="history"
               history={history}
               onOpenEntry={openHistoryEntry}
               onClearHistory={handleClearHistory}
               onStartNow={startNewDump}
-              onOpenSettings={() => setSettingsOpen(true)}
             />
           )}
-        </AnimatePresence>
         </main>
 
-        <BottomNav view={view} setView={setView} hasResults={hasResults} />
+        {!chromeless && <BottomNav view={view} setView={setView} hasResults={hasResults} />}
 
         <AnimatePresence>
           {settingsOpen && <SettingsModal onClose={() => setSettingsOpen(false)} />}

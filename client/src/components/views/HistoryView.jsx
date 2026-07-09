@@ -1,154 +1,103 @@
 import { useState } from 'react';
-import { motion } from 'framer-motion';
-import AppHeader from '../AppHeader.jsx';
 import Logo from '../Logo.jsx';
 
-const MONTHS_SHORT = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+const MESES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
 
-function formatDateParts(isoString) {
-  const date = new Date(isoString);
+function fmt(iso) {
+  const d = new Date(iso);
   const now = new Date();
-
-  const time = date.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
-  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const startOfEntry = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-  const dayDiff = Math.round((startOfToday - startOfEntry) / 86400000);
-
-  if (dayDiff === 0) return { day: 'Hoy', time };
-  if (dayDiff === 1) return { day: 'Ayer', time };
-  return { day: `${date.getDate()} ${MONTHS_SHORT[date.getMonth()]}`, time };
+  const a = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const b = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  const diff = Math.round((a - b) / 86400000);
+  const day = diff === 0 ? 'Hoy' : diff === 1 ? 'Ayer' : `${d.getDate()} ${MESES[d.getMonth()]}`;
+  const time = `${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}`;
+  return { day, time };
 }
 
-export default function HistoryView({
-  history,
-  onOpenEntry,
-  onClearHistory,
-  onStartNow,
-  onOpenSettings,
-}) {
-  const [confirmingClear, setConfirmingClear] = useState(false);
+export default function HistoryView({ history, onOpenEntry, onClearHistory, onStartNow }) {
+  const [confirming, setConfirming] = useState(false);
 
   return (
-    <motion.section
-      initial={{ y: 16, opacity: 0 }}
-      animate={{ y: 0, opacity: 1 }}
-      exit={{ y: -8, opacity: 0 }}
-      transition={{ duration: 0.25, ease: [0.25, 0.46, 0.45, 0.94] }}
-      className="flex flex-col"
-      style={{ minHeight: '100%' }}
-    >
-      <AppHeader
-        left={<Logo />}
-        title="Historial"
-        right={
-          <button
-            type="button"
-            aria-label="Ajustes"
-            onClick={onOpenSettings}
-            className="btn-ghost"
-            style={{ fontSize: 18 }}
-          >
-            ⚙️
-          </button>
-        }
-      />
+    <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', animation: 'fadeScreen 0.4s ease' }}>
+      {/* Header */}
+      <div style={{ padding: 'calc(14px + env(safe-area-inset-top)) 26px 12px' }}>
+        <div style={{ fontFamily: 'var(--mono)', fontSize: 10, letterSpacing: '0.24em', color: 'var(--text-38)', marginBottom: 10 }}>
+          TU DIARIO MENTAL
+        </div>
+        <div style={{ fontFamily: 'var(--serif)', fontSize: 34, color: 'var(--text)', lineHeight: 1 }}>
+          Historial
+        </div>
+      </div>
 
       {history.length === 0 ? (
-        <div
-          className="flex flex-1 flex-col items-center justify-center text-center"
-          style={{ gap: 'var(--s4)', padding: 'var(--s6)' }}
-        >
-          <span style={{ fontSize: 40 }} aria-hidden="true">
-            🧠
-          </span>
-          <p className="text-body" style={{ color: 'var(--text-muted)' }}>
-            Aún no hay volcados
-          </p>
-          <button type="button" onClick={onStartNow} className="btn-ghost-outline">
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: '0 40px', gap: 18 }}>
+          <Logo size={40} opacity={0.5} />
+          <div style={{ fontFamily: 'var(--serif)', fontSize: 24, fontStyle: 'italic', color: 'var(--text-60)', lineHeight: 1.3 }}>
+            Todo en silencio, por ahora
+          </div>
+          <div style={{ fontSize: 14, color: 'var(--text-45)', lineHeight: 1.5 }}>
+            Cuando sueltes lo que llevas dentro, quedará guardado aquí.
+          </div>
+          <button
+            type="button"
+            onClick={onStartNow}
+            style={{ marginTop: 4, display: 'flex', alignItems: 'center', gap: 8, padding: '13px 22px', borderRadius: 14, border: '1px solid var(--border-2)', background: 'var(--surface-2)', color: 'var(--text)', fontFamily: 'var(--sans)', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}
+          >
             Empezar ahora →
           </button>
         </div>
       ) : (
-        <>
-          <div>
-            {history.map((entry, index) => {
-              const { day, time } = formatDateParts(entry.createdAt);
-              return (
-                <motion.button
-                  key={entry.id}
-                  type="button"
-                  onClick={() => onOpenEntry(entry)}
-                  initial={{ opacity: 0, y: 16 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{
-                    duration: 0.25,
-                    delay: index * 0.07,
-                    ease: [0.25, 0.46, 0.45, 0.94],
-                  }}
-                  className="history-row"
-                >
-                  <span className="history-date">
-                    <span className="history-date-day">{day}</span>
-                    <span className="history-date-time tabular-nums">{time}</span>
-                  </span>
-                  <span className="history-preview">
-                    <span className="history-text block">
-                      {entry.originalText.slice(0, 80)}
-                      {entry.originalText.length > 80 ? '…' : ''}
+        <div className="scroll-y" style={{ flex: 1, minHeight: 0, padding: '8px 22px calc(24px + env(safe-area-inset-bottom))' }}>
+          {history.map((entry) => {
+            const { day, time } = fmt(entry.createdAt);
+            const totalItems = entry.parsed.reduce((n, c) => n + (c.items ? c.items.length : 0), 0);
+            return (
+              <button
+                key={entry.id}
+                type="button"
+                onClick={() => onOpenEntry(entry)}
+                style={{ display: 'block', width: '100%', textAlign: 'left', borderRadius: 20, border: '1px solid var(--border)', background: 'var(--surface)', padding: 18, marginBottom: 12, cursor: 'pointer' }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+                  <span style={{ fontFamily: 'var(--serif)', fontSize: 19, color: 'var(--text)' }}>{day}</span>
+                  <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--text-40)' }}>{time}</span>
+                </div>
+                <div style={{ fontSize: 14.5, lineHeight: 1.55, color: 'var(--text-60)' }}>
+                  {entry.originalText.slice(0, 96).trim()}
+                  {entry.originalText.length > 96 ? '…' : ''}
+                </div>
+                <div style={{ display: 'flex', gap: 7, marginTop: 14, alignItems: 'center', flexWrap: 'wrap' }}>
+                  {entry.parsed.map((c) => (
+                    <span key={c.id} style={{ width: 30, height: 30, borderRadius: 9, background: 'var(--surface-3)', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14 }}>
+                      {c.emoji}
                     </span>
-                    <span className="history-chips">
-                      {entry.parsed.map((cat) => (
-                        <span key={cat.id} className="history-chip">
-                          {cat.emoji} {cat.items.length}
-                        </span>
-                      ))}
-                    </span>
+                  ))}
+                  <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--text-40)', display: 'flex', alignItems: 'center', marginLeft: 4 }}>
+                    {totalItems} ítems
                   </span>
-                </motion.button>
-              );
-            })}
-          </div>
+                </div>
+              </button>
+            );
+          })}
 
-          <div
-            className="flex justify-center"
-            style={{ padding: 'var(--s8) var(--s4) var(--s4)' }}
-          >
-            {confirmingClear ? (
-              <div className="flex items-center" style={{ gap: 'var(--s4)', fontSize: 13 }}>
-                <span style={{ color: 'var(--text-secondary)' }}>¿Borrar todo el historial?</span>
-                <button
-                  type="button"
-                  onClick={() => {
-                    onClearHistory();
-                    setConfirmingClear(false);
-                  }}
-                  className="btn-ghost"
-                  style={{ color: 'var(--danger)', fontWeight: 700, fontSize: 13 }}
-                >
-                  Sí, borrar
+          <div style={{ display: 'flex', justifyContent: 'center', padding: '18px 0 4px' }}>
+            {confirming ? (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 16, fontFamily: 'var(--mono)', fontSize: 11 }}>
+                <button type="button" onClick={() => { onClearHistory(); setConfirming(false); }} style={{ border: 'none', background: 'transparent', color: 'var(--c-urgente)', cursor: 'pointer', fontFamily: 'var(--mono)', fontSize: 11, letterSpacing: '0.1em' }}>
+                  SÍ, VACIAR
                 </button>
-                <button
-                  type="button"
-                  onClick={() => setConfirmingClear(false)}
-                  className="btn-ghost"
-                  style={{ fontSize: 13 }}
-                >
-                  Cancelar
+                <button type="button" onClick={() => setConfirming(false)} style={{ border: 'none', background: 'transparent', color: 'var(--text-40)', cursor: 'pointer', fontFamily: 'var(--mono)', fontSize: 11, letterSpacing: '0.1em' }}>
+                  CANCELAR
                 </button>
               </div>
             ) : (
-              <button
-                type="button"
-                onClick={() => setConfirmingClear(true)}
-                className="btn-ghost"
-                style={{ color: 'var(--danger)', fontSize: 13 }}
-              >
-                Borrar historial
+              <button type="button" onClick={() => setConfirming(true)} style={{ border: 'none', background: 'transparent', color: 'var(--text-40)', cursor: 'pointer', fontFamily: 'var(--mono)', fontSize: 11, letterSpacing: '0.14em' }}>
+                VACIAR HISTORIAL
               </button>
             )}
           </div>
-        </>
+        </div>
       )}
-    </motion.section>
+    </div>
   );
 }
