@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import Logo from './Logo.jsx';
 
 export default function SplashScreen() {
   const [fadingOut, setFadingOut] = useState(false);
@@ -43,9 +44,7 @@ export default function SplashScreen() {
       <div
         style={{ zIndex: 2, animation: 'floatUp 0.7s cubic-bezier(0.34,1.56,0.64,1)' }}
       >
-        <span className="logo" style={{ fontSize: 56 }}>
-          ord<span className="x">x</span>
-        </span>
+        <Logo size={56} />
       </div>
       <span
         style={{ zIndex: 2, fontFamily: 'var(--serif)', fontStyle: 'italic', fontSize: 16, color: 'var(--text-45)', animation: 'floatUp 0.6s ease 0.25s both' }}
