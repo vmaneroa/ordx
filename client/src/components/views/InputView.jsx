@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import AppHeader from '../AppHeader.jsx';
 import Logo from '../Logo.jsx';
+import { useSpeechRecognition } from '../../hooks/useSpeechRecognition.js';
 
 const PLACEHOLDERS = [
   'Escribe todo lo que tienes en la cabeza...',
@@ -64,6 +65,28 @@ function LoadingScreen() {
 
 export default function InputView({ text, setText, loading, error, onSubmit, onOpenSettings }) {
   const [placeholderIndex, setPlaceholderIndex] = useState(0);
+  const [interimText, setInterimText] = useState('');
+
+  const { isListening, isSupported, toggleListening, stopListening } = useSpeechRecognition({
+    onResult: ({ final, interim }) => {
+      if (final) {
+        // Añade el texto final al textarea (acumula, no reemplaza)
+        setText((prev) => prev + final);
+        setInterimText('');
+      } else {
+        setInterimText(interim);
+      }
+    },
+    onEnd: () => setInterimText(''),
+  });
+
+  // Al enviar el volcado se corta el dictado
+  useEffect(() => {
+    if (loading && isListening) {
+      stopListening();
+      setInterimText('');
+    }
+  }, [loading, isListening, stopListening]);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -167,13 +190,41 @@ export default function InputView({ text, setText, loading, error, onSubmit, onO
             )}
           </div>
 
+          {isListening && (
+            <div
+              style={{
+                fontSize: '14px',
+                color: 'rgba(238,238,245,0.35)',
+                fontStyle: 'italic',
+                padding: '6px 4px',
+                minHeight: '24px',
+                marginTop: 'calc(-1 * var(--s2))',
+              }}
+            >
+              {interimText || '🎙 Escuchando...'}
+            </div>
+          )}
+
           <div className="flex items-center justify-between" style={{ marginTop: 'calc(-1 * var(--s2))' }}>
             <button type="button" onClick={() => setText(EXAMPLE_TEXT)} className="btn-link">
               Ver ejemplo
             </button>
-            <span className="text-caption tabular-nums">
-              {wordCount} {wordCount === 1 ? 'palabra' : 'palabras'}
-            </span>
+            <div className="flex items-center" style={{ gap: 'var(--s3)' }}>
+              <span className="text-caption tabular-nums">
+                {wordCount} {wordCount === 1 ? 'palabra' : 'palabras'}
+              </span>
+              {isSupported && (
+                <button
+                  type="button"
+                  onClick={toggleListening}
+                  className={`mic-btn${isListening ? ' mic-btn--active' : ''}`}
+                  title={isListening ? 'Detener dictado' : 'Dictar por voz'}
+                >
+                  {isListening ? '⏹' : '🎙️'}
+                  <span>{isListening ? 'Detener' : 'Dictar'}</span>
+                </button>
+              )}
+            </div>
           </div>
 
           {error && (

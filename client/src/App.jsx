@@ -5,6 +5,7 @@ import InputView from './components/views/InputView.jsx';
 import ResultsView from './components/views/ResultsView.jsx';
 import HistoryView from './components/views/HistoryView.jsx';
 import SettingsModal from './components/SettingsModal.jsx';
+import SplashScreen from './components/SplashScreen.jsx';
 import Toast from './components/Toast.jsx';
 import { parseResult } from './utils/parseResult.js';
 import { getHistory, saveEntry, clearHistory, generateId } from './utils/storage.js';
@@ -18,6 +19,12 @@ export default function App() {
   const [history, setHistory] = useState(() => getHistory());
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [toast, setToast] = useState(null);
+  const [showSplash, setShowSplash] = useState(true);
+
+  useEffect(() => {
+    const t = setTimeout(() => setShowSplash(false), 1800);
+    return () => clearTimeout(t);
+  }, []);
 
   useEffect(() => {
     if (!toast) return undefined;
@@ -86,8 +93,13 @@ export default function App() {
   const hasResults = Boolean(current);
 
   return (
-    <div className="app-shell">
-      <main className="view-scroll">
+    <>
+      {showSplash && <SplashScreen />}
+      <div
+        className="app-shell"
+        style={{ opacity: showSplash ? 0 : 1, transition: 'opacity 300ms' }}
+      >
+        <main className="view-scroll">
         <AnimatePresence mode="wait">
           {view === 'input' && (
             <InputView
@@ -119,17 +131,18 @@ export default function App() {
             />
           )}
         </AnimatePresence>
-      </main>
+        </main>
 
-      <BottomNav view={view} setView={setView} hasResults={hasResults} />
+        <BottomNav view={view} setView={setView} hasResults={hasResults} />
 
-      <AnimatePresence>
-        {settingsOpen && <SettingsModal onClose={() => setSettingsOpen(false)} />}
-      </AnimatePresence>
+        <AnimatePresence>
+          {settingsOpen && <SettingsModal onClose={() => setSettingsOpen(false)} />}
+        </AnimatePresence>
 
-      <AnimatePresence>
-        {toast && <Toast key={toast.key} message={toast.message} variant={toast.variant} />}
-      </AnimatePresence>
-    </div>
+        <AnimatePresence>
+          {toast && <Toast key={toast.key} message={toast.message} variant={toast.variant} />}
+        </AnimatePresence>
+      </div>
+    </>
   );
 }

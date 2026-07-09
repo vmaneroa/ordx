@@ -13,9 +13,6 @@ dist/
 # Vercel
 .vercel/
 
-# Iconos generados en build (client/scripts/generate-icons.mjs)
-*.png
-
 # Logs
 *.log
 npm-debug.log*

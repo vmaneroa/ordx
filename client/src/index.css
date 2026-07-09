@@ -79,7 +79,7 @@ body,
   height: 100%;
   height: 100dvh; /* dynamic viewport height — crítico en móvil */
   overflow: hidden;
-  background: var(--bg-base);
+  background: #08080e; /* cubre cualquier hueco residual en iOS standalone */
   font-family: 'Inter', sans-serif;
   -webkit-font-smoothing: antialiased;
   color: var(--text-primary);
@@ -88,6 +88,23 @@ body,
 body {
   overscroll-behavior: none; /* previene el bounce de iOS */
   -webkit-overflow-scrolling: auto;
+  /* Reserva la zona del home indicator: el contenido nunca queda debajo */
+  padding-bottom: env(safe-area-inset-bottom);
+  box-sizing: border-box;
+}
+
+/* Fuerza el fondo oscuro detrás del home indicator en iOS standalone */
+@supports (-webkit-touch-callout: none) {
+  body::after {
+    content: '';
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: env(safe-area-inset-bottom);
+    background: #08080e;
+    z-index: 9998;
+  }
 }
 
 /* Fuera del max-width en desktop: fondo con patrón sutil */
@@ -107,7 +124,8 @@ body::before {
 .app-shell {
   display: flex;
   flex-direction: column;
-  height: 100dvh;
+  /* 100% del body, que ya descuenta el safe area inferior */
+  height: 100%;
   max-width: 430px;
   margin: 0 auto;
   position: relative;
@@ -122,7 +140,7 @@ body::before {
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior-y: contain;
-  padding-bottom: calc(var(--s4) + env(safe-area-inset-bottom));
+  padding-bottom: var(--s4); /* el safe area inferior ya lo reserva el body */
 }
 
 /* ============================================================
@@ -249,12 +267,12 @@ body::before {
    ============================================================ */
 .bottom-nav {
   display: flex;
-  background: rgba(8, 8, 14, 0.92);
+  background: rgba(8, 8, 14, 0.95); /* fondo opaco: sin transparencias sobre el hueco */
   backdrop-filter: blur(20px) saturate(180%);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
   border-top: 1px solid var(--border-subtle);
-  padding-bottom: env(safe-area-inset-bottom);
-  height: calc(60px + env(safe-area-inset-bottom));
+  /* El safe area inferior ya lo reserva el body — el nav mide sus 60px justos */
+  height: 60px;
   position: relative;
   z-index: 100;
   flex-shrink: 0;
@@ -453,6 +471,47 @@ body::before {
   50% {
     transform: scale(1.15);
     opacity: 1;
+  }
+}
+
+/* Botón de dictado por voz */
+.mic-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: var(--r-pill);
+  border: 1.5px solid var(--border-default);
+  background: transparent;
+  color: var(--text-secondary);
+  font-family: 'Inter', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 150ms ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.mic-btn:hover {
+  border-color: var(--violet);
+  color: var(--text-primary);
+}
+
+/* Estado activo: pulsa al ritmo de la voz */
+.mic-btn--active {
+  border-color: #ef4444;
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.08);
+  animation: mic-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes mic-pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(239, 68, 68, 0);
   }
 }
 
