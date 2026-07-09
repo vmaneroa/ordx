@@ -14,15 +14,31 @@ const ORD_COLOR = '#EEEEF5';
 const X_COLOR = '#7C3AED';
 
 const svgIcon = (size) => {
-  const fontSize = Math.round(size * 0.32);
-  const baselineY = Math.round(size * 0.62);
-  return Buffer.from(`<svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg">
-  <rect width="${size}" height="${size}" rx="${Math.round(size * 0.22)}" fill="#08080E"/>
-  <text x="50%" y="${baselineY}" text-anchor="middle"
-    font-family="Arial Black, Arial, sans-serif"
-    font-weight="900"
-    font-size="${fontSize}"><tspan fill="${ORD_COLOR}">ord</tspan><tspan fill="${X_COLOR}">x</tspan></text>
-</svg>`);
+  const fontSize = Math.round(size * 0.34);
+  const y = Math.round(size * 0.63);
+  const x = Math.round(size * 0.08);
+
+  return Buffer.from(`<svg width="${size}" height="${size}"
+    viewBox="0 0 ${size} ${size}" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="0%">
+        <stop offset="0%"   stop-color="#7C3AED"/>
+        <stop offset="100%" stop-color="#06B6D4"/>
+      </linearGradient>
+    </defs>
+    <rect width="${size}" height="${size}"
+          rx="${Math.round(size * 0.22)}" fill="#08080E"/>
+    <text x="${x}" y="${y}"
+          font-family="Arial Black, Arial, sans-serif"
+          font-weight="900"
+          font-size="${fontSize}"
+          fill="#FFFFFF">o</text>
+    <text x="${Math.round(size * 0.285)}" y="${y}"
+          font-family="Arial Black, Arial, sans-serif"
+          font-weight="900"
+          font-size="${fontSize}"
+          fill="url(#g)">rdx</text>
+  </svg>`);
 };
 
 // Icono estándar para iOS (apple-touch-icon)
