@@ -79,7 +79,7 @@ body,
   height: 100%;
   height: 100dvh; /* dynamic viewport height — crítico en móvil */
   overflow: hidden;
-  background: #08080e; /* cubre cualquier hueco residual en iOS standalone */
+  background: var(--bg-base);
   font-family: 'Inter', sans-serif;
   -webkit-font-smoothing: antialiased;
   color: var(--text-primary);
@@ -88,23 +88,6 @@ body,
 body {
   overscroll-behavior: none; /* previene el bounce de iOS */
   -webkit-overflow-scrolling: auto;
-  /* Reserva la zona del home indicator: el contenido nunca queda debajo */
-  padding-bottom: env(safe-area-inset-bottom);
-  box-sizing: border-box;
-}
-
-/* Fuerza el fondo oscuro detrás del home indicator en iOS standalone */
-@supports (-webkit-touch-callout: none) {
-  body::after {
-    content: '';
-    position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: env(safe-area-inset-bottom);
-    background: #08080e;
-    z-index: 9998;
-  }
 }
 
 /* Fuera del max-width en desktop: fondo con patrón sutil */
@@ -124,8 +107,7 @@ body::before {
 .app-shell {
   display: flex;
   flex-direction: column;
-  /* 100% del body, que ya descuenta el safe area inferior */
-  height: 100%;
+  height: 100dvh;
   max-width: 430px;
   margin: 0 auto;
   position: relative;
@@ -267,12 +249,12 @@ body::before {
    ============================================================ */
 .bottom-nav {
   display: flex;
-  background: rgba(8, 8, 14, 0.95); /* fondo opaco: sin transparencias sobre el hueco */
+  background: rgba(8, 8, 14, 0.92);
   backdrop-filter: blur(20px) saturate(180%);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
   border-top: 1px solid var(--border-subtle);
-  /* El safe area inferior ya lo reserva el body — el nav mide sus 60px justos */
-  height: 60px;
+  padding-bottom: env(safe-area-inset-bottom);
+  height: calc(60px + env(safe-area-inset-bottom));
   position: relative;
   z-index: 100;
   flex-shrink: 0;
